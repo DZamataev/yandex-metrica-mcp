@@ -5,14 +5,14 @@
     "version": "0.3.0",
     "description": "Query your Yandex Metrica web analytics — reports, conversions, and raw logs — from an AI agent. Read-only.",
     "author": {
-        "name": "BoxLab",
-        "url": "https://github.com/BoxLab-Ltd"
+        "name": "DZamataev",
+        "url": "https://github.com/DZamataev"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/BoxLab-Ltd/yandex-metrica-mcp.git"
+        "url": "https://github.com/DZamataev/yandex-metrica-mcp.git"
     },
-    "homepage": "https://github.com/BoxLab-Ltd/yandex-metrica-mcp#readme",
+    "homepage": "https://github.com/DZamataev/yandex-metrica-mcp#readme",
     "license": "MIT",
     "keywords": [
         "yandex",

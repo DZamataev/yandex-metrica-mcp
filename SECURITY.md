@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security issues privately via GitHub's
-[**Private Vulnerability Reporting**](https://github.com/BoxLab-Ltd/yandex-metrica-mcp/security/advisories/new)
+[**Private Vulnerability Reporting**](https://github.com/DZamataev/yandex-metrica-mcp/security/advisories/new)
 (Security → Report a vulnerability). Do not open a public issue for security
 problems. We aim to respond within a few business days.
 
