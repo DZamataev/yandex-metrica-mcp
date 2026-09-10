@@ -1,0 +1,39 @@
+# gitleaks configuration for this fork.
+#
+# Extends the upstream default ruleset (~200 rules) and adds a NARROW allowlist
+# for the one documented false positive. The goal is a scan that stays useful:
+# blanket-disabling `generic-api-key` would silence the rule most likely to
+# catch a real leak in a repo that handles OAuth tokens.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented non-secrets in this repository"
+
+# Paths that only ever contain placeholders or fixtures.
+paths = [
+    '''\.env\.example$''',
+    '''bun\.lock$''',
+]
+
+regexes = [
+    # The embedded PUBLIC OAuth client id (src/config.ts). Yandex public
+    # clients ship the id and authenticate with PKCE — there is no secret to
+    # leak. Pinned to this exact value so any OTHER 32-hex constant still trips
+    # the rule.
+    '''6f14d1c1384440b1b2915f6d956da84b''',
+]
+
+[[rules]]
+id = "yandex-oauth-token"
+description = "Yandex OAuth access token"
+# Yandex ID tokens are ~50-70 chars of [A-Za-z0-9_-], commonly prefixed y0_ or
+# y1_. Anchored to an assignment/quote so prose does not match.
+regex = '''(?i)\b(y[0-2]_[A-Za-z0-9_\-]{40,})'''
+keywords = ["y0_", "y1_", "y2_"]
+
+[[rules]]
+id = "yandex-token-json"
+description = "A cached token.json payload committed by mistake"
+regex = '''"accessToken"\s*:\s*"[A-Za-z0-9_\-]{20,}"'''
+keywords = ["accessToken"]

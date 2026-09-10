@@ -43,6 +43,7 @@
         "format": "prettier --write .",
         "test": "bun test",
         "test:watch": "bun test --watch",
+        "secrets": "gitleaks detect --config .gitleaks.toml --redact --verbose --no-banner",
         "prepare": "tsc -p tsconfig.build.json",
         "prepublishOnly": "npm run build"
     },

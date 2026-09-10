@@ -368,7 +368,17 @@ bun run typecheck  # tsc --noEmit
 bun run lint       # eslint
 bun test           # bun's test runner
 bun run build      # emit dist/ with tsc (Node-compatible)
+bun run secrets    # gitleaks: scan the full git history for secrets
 ```
+
+`bun run secrets` needs [gitleaks](https://github.com/gitleaks/gitleaks)
+(`brew install gitleaks`). CI runs the same scan on every push and PR, over the
+full history — a secret deleted in a later commit is still in the pack, so
+depth matters. Rules live in [`.gitleaks.toml`](./.gitleaks.toml): the upstream
+default set plus two Yandex-token rules, and a narrow allowlist for the one
+documented false positive (the embedded **public** OAuth client id, which ships
+by design and has no secret). The allowlist pins that exact value rather than
+disabling the rule, so any other key-shaped constant still fails the build.
 
 ### Fork layout
 
