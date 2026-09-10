@@ -92,36 +92,53 @@ and open it with Claude Desktop (or drag it into Settings → Extensions). It as
 for an optional default counter id; then sign in from the chat with the `login`
 tool (or run `npx -y github:DZamataev/yandex-metrica-mcp auth`).
 
-### Or connect it to Hermes / Claude Code
+### Or connect it to Hermes
 
-Add the server to Hermes' MCP config (`~/.hermes/config.yaml`) — or run the
-equivalent `claude mcp add` — pointing at this fork:
+Add an entry under `mcp_servers:` in `~/.hermes/config.yaml`:
 
 ```yaml
 mcp_servers:
-    yandex-metrica:
-        command: npx
-        args: ['-y', 'github:DZamataev/yandex-metrica-mcp']
-        env:
-            YANDEX_METRIKA_COUNTER_ID: '12345678' # optional
+  yandex-metrica:
+    command: npx
+    args:
+      - '-y'
+      - 'github:DZamataev/yandex-metrica-mcp'
+    env:
+      YANDEX_METRIKA_COUNTER_ID: '12345678' # optional
 ```
 
-For Claude Code:
+Then restart Hermes and sign in once — either run
+`npx -y github:DZamataev/yandex-metrica-mcp auth` in a terminal, or just ask the
+agent to run the `login` tool.
 
-```bash
-claude mcp add yandex-metrica -- npx -y github:DZamataev/yandex-metrica-mcp
-```
-
-Then sign in once (`npx -y github:DZamataev/yandex-metrica-mcp auth`), or just
-ask the agent to run the `login` tool.
-
-Prefer a fixed local checkout over a fresh clone on every start? Clone the fork,
-`bun install && bun run build`, and point the client at the built entry point:
+**Recommended: a fixed local checkout.** The `npx` form re-resolves the Git ref
+on every start, so a fresh push changes what runs without you doing anything —
+which defeats half the point of running from a fork. Clone it, build it, and
+point Hermes at the built entry point:
 
 ```bash
 git clone git@github.com:DZamataev/yandex-metrica-mcp.git
 cd yandex-metrica-mcp && bun install && bun run build
-claude mcp add yandex-metrica -- node "$PWD/dist/index.js"
+```
+
+```yaml
+mcp_servers:
+  yandex-metrica:
+    command: node
+    args:
+      - '/absolute/path/to/yandex-metrica-mcp/dist/index.js'
+```
+
+Use an absolute path to `node` (e.g. `/opt/homebrew/bin/node`) if the server
+fails to start — a GUI-launched client does not always inherit your shell
+`PATH`.
+
+### Or connect it to Claude Code
+
+Claude Code has its own CLI for this:
+
+```bash
+claude mcp add yandex-metrica -- npx -y github:DZamataev/yandex-metrica-mcp
 ```
 
 ## Why
