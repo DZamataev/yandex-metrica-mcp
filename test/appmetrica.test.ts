@@ -29,20 +29,38 @@ const jsonResponse = (body: unknown) =>
 describe('appmetrica: credential stripping', () => {
     // api_key128 / import_token are write credentials for the app. They must
     // never reach the model's context.
-    test('sanitizeApplication drops api keys and import tokens', () => {
+    test('sanitizeApplication keeps only allowlisted fields', () => {
+        // Field set observed live from /management/v1/applications.
         const raw = {
             id: 42,
             name: 'App',
+            owner_login: 'someone@example.com',
+            permission: 'own',
+            time_zone_name: 'Europe/Moscow',
+            bundle_id: 'com.example.app',
+            // Credentials — must never surface.
             api_key128: 'SECRET-API-KEY',
             import_token: 'SECRET-IMPORT-TOKEN',
             post_api_key: 'SECRET-POST-KEY',
+            // Org-internal identifiers — not the model's business.
+            team_id: 'SECRET-TEAM-ID',
+            organization_id: 474154,
+            uid: 1666715417,
+            // Unknown future field: an allowlist must drop it by default.
+            some_future_secret: 'SECRET-FUTURE',
         }
         const clean = sanitizeApplication(raw) as Record<string, unknown>
+
         expect(clean.id).toBe(42)
         expect(clean.name).toBe('App')
+        expect(clean.bundle_id).toBe('com.example.app')
         expect(clean.api_key128).toBeUndefined()
         expect(clean.import_token).toBeUndefined()
         expect(clean.post_api_key).toBeUndefined()
+        expect(clean.team_id).toBeUndefined()
+        expect(clean.organization_id).toBeUndefined()
+        expect(clean.uid).toBeUndefined()
+        expect(clean.some_future_secret).toBeUndefined()
         expect(JSON.stringify(clean)).not.toContain('SECRET')
     })
 

@@ -49,15 +49,42 @@ export const ApplicationResponseSchema = z.object({
 })
 
 /**
- * Fields that are secrets or pure noise. `api_key128`/`import_token` are write
- * credentials for the app; never surface them to the model.
+ * Fields surfaced to the model — an ALLOWLIST, deliberately.
+ *
+ * The apps endpoint returns credentials (`api_key128`, `import_token`: write
+ * keys for the app) alongside org-internal identifiers (`team_id` — the Apple
+ * Developer Team ID, `organization_id`, `uid`) and a long tail of tracker
+ * tuning flags. A blocklist would leak every field Yandex adds later, so only
+ * these pass through. Widen it consciously if a tool needs more.
  */
-const SECRET_FIELDS = ['api_key128', 'import_token', 'post_api_key'] as const
+const PUBLIC_FIELDS = [
+    'id',
+    'name',
+    'owner_login',
+    'permission',
+    'permission_date',
+    'time_zone_name',
+    'time_zone_offset',
+    'create_date',
+    'bundle_id',
+    'category',
+    'label',
+    'label_id',
+    'gdpr_agreement_accepted',
+    'hide_address',
+    'features',
+] as const
 
-/** Strip credential fields from a parsed application. */
+/**
+ * Reduce an application to the allowlisted fields. Drops API keys, import
+ * tokens and org-internal ids so they can never reach the model's context.
+ */
 export function sanitizeApplication(app: Application): Application {
-    const clean: Record<string, unknown> = { ...app }
-    for (const field of SECRET_FIELDS) delete clean[field]
+    const source = app as Record<string, unknown>
+    const clean: Record<string, unknown> = {}
+    for (const field of PUBLIC_FIELDS) {
+        if (source[field] !== undefined) clean[field] = source[field]
+    }
     return clean as Application
 }
 
