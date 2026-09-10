@@ -2,7 +2,7 @@
     "mcpServers": {
         "yandex-metrica": {
             "command": "npx",
-            "args": ["-y", "yandex-metrica-mcp"]
+            "args": ["-y", "github:DZamataev/yandex-metrica-mcp"]
         }
     }
 }
