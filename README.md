@@ -124,14 +124,40 @@ cd yandex-metrica-mcp && bun install && bun run build
 ```yaml
 mcp_servers:
   yandex-metrica:
-    command: node
+    command: /Users/you/.hermes/node/bin/node
     args:
       - '/absolute/path/to/yandex-metrica-mcp/dist/index.js'
 ```
 
-Use an absolute path to `node` (e.g. `/opt/homebrew/bin/node`) if the server
-fails to start — a GUI-launched client does not always inherit your shell
-`PATH`.
+Use an absolute path to `node` (Hermes ships its own at
+`~/.hermes/node/bin/node`) — a GUI-launched client does not always inherit your
+shell `PATH`.
+
+Hermes refuses agent writes to `config.yaml`, so edit it yourself or use the
+CLI:
+
+```bash
+hermes config set mcp_servers.yandex-metrica.command ~/.hermes/node/bin/node
+hermes config set mcp_servers.yandex-metrica.args '["/absolute/path/to/yandex-metrica-mcp/dist/index.js"]'
+```
+
+Working on the server itself? The entry above runs the **built** output, so the
+edit loop is:
+
+```bash
+bun run build   # then restart Hermes to reload the server
+```
+
+To smoke-test a change without restarting anything, drive it over stdio
+directly — this prints the tool list:
+
+```bash
+printf '%s\n%s\n%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"probe","version":"1"}}}' \
+  '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+  | node dist/index.js 2>/dev/null | tail -1
+```
 
 ### Or connect it to Claude Code
 
