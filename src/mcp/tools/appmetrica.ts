@@ -1,6 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { getApplication, listApplications } from '../../api/appmetrica.js'
 import {
+    APPMETRICA_CRASH_DIMENSIONS,
+    APPMETRICA_CRASH_METRICS,
     APPMETRICA_DIMENSIONS,
     APPMETRICA_METRICS,
     APPMETRICA_NAMESPACES,
@@ -107,8 +109,16 @@ export function registerAppmetricaGetMetadata(
                     })),
                     catalog: {
                         namespaces: APPMETRICA_NAMESPACES,
-                        metrics: APPMETRICA_METRICS,
-                        dimensions: APPMETRICA_DIMENSIONS,
+                        general_events: {
+                            prefix: 'ym:ge:',
+                            metrics: APPMETRICA_METRICS,
+                            dimensions: APPMETRICA_DIMENSIONS,
+                        },
+                        crashes: {
+                            prefix: 'ym:cr:',
+                            metrics: APPMETRICA_CRASH_METRICS,
+                            dimensions: APPMETRICA_CRASH_DIMENSIONS,
+                        },
                         notes: APPMETRICA_NOTES,
                     },
                 })

@@ -322,10 +322,17 @@ re-run the `login` tool.
   (general events), `ym:ce:` (custom events), `ym:i:` (installs), `ym:c:`
   (clicks), `ym:s:` (sessions). Only `filters` may reference another prefix.
 - **No metadata API.** AppMetrica publishes no endpoint listing valid ids, so
-  `appmetrica_get_metadata` returns a curated subset from the docs, not the full
-  set. Unknown ids fail with 4001 (dimension) or 4002 (metric). For anything
-  outside the catalog, open the report in the AppMetrica UI and use
+  `appmetrica_get_metadata` returns a curated subset, not the full set. Unknown
+  ids fail with 4001 (dimension) or 4002 (metric). For anything outside the
+  catalog, open the report in the AppMetrica UI and use
   **Export → Copy table API request** to get exact ids.
+- **Crashes live in `ym:cr:`.** Top crashes = `ym:cr:crashes` grouped by
+  `ym:cr:crashGroupName` (exception class + source location). Platform filter
+  values are lowercase — `ym:cr:operatingSystemInfo=='android'` — even though
+  the dimension renders `Android`. There is no crash-free-rate metric; derive
+  it from `ym:cr:users ÷ ym:ge:users`. Every crash id in the catalog was
+  verified against the live API; see [`docs/API-NOTES.md`](./docs/API-NOTES.md)
+  for the ids that look plausible but are rejected.
 - **API keys are never returned.** The apps endpoint also carries `api_key128`
   and `import_token` — credentials for writing data into the app. They are
   stripped before anything reaches the model.

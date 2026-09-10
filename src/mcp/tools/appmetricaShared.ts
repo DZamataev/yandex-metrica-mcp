@@ -23,7 +23,8 @@ const metrics = z
     .max(20)
     .describe(
         'AppMetrica metric ids, e.g. ["ym:ge:users","ym:ge:sessions"]. Max 20. ' +
-            'All ids in one call must share a namespace prefix (ym:ge:, ym:ce:, ym:i:, ym:c:, ym:s:). ' +
+            'All ids in one call must share a namespace prefix (ym:ge:, ym:ce:, ym:cr:, ym:i:, ym:c:, ym:s:). ' +
+            'For CRASHES use the ym:cr: namespace: ["ym:cr:crashes"] grouped by ["ym:cr:crashGroupName"]. ' +
             'Discover ids with appmetrica_get_metadata.',
     )
 
@@ -41,6 +42,7 @@ const filters = z
     .optional()
     .describe(
         "Filter expression in AppMetrica syntax, e.g. ym:ge:regionCountry=='RU'. " +
+            "Platform filter values are LOWERCASE: ym:cr:operatingSystemInfo=='android' (or 'ios'). " +
             'This is the only place a different namespace prefix may appear.',
     )
 

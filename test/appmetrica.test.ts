@@ -5,6 +5,12 @@ import {
     listApplications,
     sanitizeApplication,
 } from '../src/api/appmetrica.js'
+import {
+    APPMETRICA_CRASH_DIMENSIONS,
+    APPMETRICA_CRASH_METRICS,
+    APPMETRICA_NAMESPACES,
+    APPMETRICA_NOTES,
+} from '../src/api/appmetricaCatalog.js'
 import { loadConfig } from '../src/config.js'
 import { resolveAppId } from '../src/mcp/context.js'
 import { appmetricaErrorResult } from '../src/mcp/format.js'
@@ -165,6 +171,54 @@ describe('appmetrica: error hints', () => {
         const text = res.content[0]?.type === 'text' ? res.content[0].text : ''
         expect(text).toContain('not_found')
         expect(text).not.toContain('appmetrica:read')
+    })
+})
+
+describe('appmetrica: crash catalog', () => {
+    // Every id here was probed live against the API. The negative list is the
+    // point: these plausible-looking names are REJECTED, and shipping one in
+    // the catalog would cost a failed round-trip on every crash question.
+    test('exposes only crash ids the API accepts', () => {
+        const ids = [
+            ...APPMETRICA_CRASH_METRICS.map(m => m.id),
+            ...APPMETRICA_CRASH_DIMENSIONS.map(d => d.id),
+        ]
+        const rejected = [
+            'ym:cr:crashName',
+            'ym:cr:osName',
+            'ym:cr:osVersionInfo',
+            'ym:cr:crashGroupId',
+            'ym:cr:errors',
+            'ym:cr:anrs',
+            'ym:cr:crashFreeUsers',
+        ]
+        for (const bad of rejected) expect(ids).not.toContain(bad)
+
+        expect(ids).toContain('ym:cr:crashes')
+        expect(ids).toContain('ym:cr:crashGroupName')
+        expect(ids).toContain('ym:cr:operatingSystemInfo')
+    })
+
+    test('every crash id carries the ym:cr: prefix', () => {
+        for (const e of [
+            ...APPMETRICA_CRASH_METRICS,
+            ...APPMETRICA_CRASH_DIMENSIONS,
+        ]) {
+            expect(e.id.startsWith('ym:cr:')).toBe(true)
+            expect(e.title.length).toBeGreaterThan(0)
+        }
+    })
+
+    test('ym:cr: is a documented namespace', () => {
+        const prefixes = APPMETRICA_NAMESPACES.map(n => n.prefix)
+        expect(prefixes).toContain('ym:cr:')
+    })
+
+    test('notes warn about the lowercase platform filter values', () => {
+        const notes = APPMETRICA_NOTES.join(' ')
+        expect(notes).toContain("operatingSystemInfo=='android'")
+        // The crash-free rate has no metric and must be derived.
+        expect(notes).toContain('crash-free')
     })
 })
 

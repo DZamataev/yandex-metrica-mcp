@@ -190,3 +190,23 @@ AppMetrica is **not** Yandex Metrica. Verified differences:
 - **403 `access_denied` here usually means a missing scope**, not missing
   account access — the embedded OAuth client is Metrica-only. The AppMetrica
   tools use `appmetricaErrorResult()` to say so explicitly.
+
+### Crashes (`ym:cr:`)
+
+Probed live against a real app; the catalog ships only ids that returned 200.
+
+- Working metrics: `crashes`, `crashDevices`, `users`.
+- Working dimensions: `crashGroupName` (exception class + source location),
+  `operatingSystemInfo`, `operatingSystemVersion`, `appVersion`,
+  `appVersionAndOS`, `buildNumber`, `mobileDeviceBranding`,
+  `mobileDeviceModel`, `deviceType`, `regionCountry`, `regionCity`.
+- **Rejected despite looking plausible** — do not re-add: `ym:cr:crashName`,
+  `ym:cr:osName`, `ym:cr:osVersionInfo`, `ym:cr:crashGroupId`, `ym:cr:errors`,
+  `ym:cr:anrs`, `ym:cr:crashesPerDevice`, `ym:cr:crashFreeUsers`,
+  `ym:cr:crashFreeDevices`.
+- Platform filter values are **lowercase** (`=='android'`, `=='ios'`) even
+  though the dimension renders `Android`/`iOS`.
+- There is no crash-free-rate metric; derive it as
+  `1 - (ym:cr:users ÷ ym:ge:users)` over the same period and platform filter.
+- Crash counts per app version are meaningless without that version's active
+  user base — a fresh rollout always looks stable.
