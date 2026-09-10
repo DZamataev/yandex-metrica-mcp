@@ -23,8 +23,15 @@ export const SERVER_VERSION = pkg.version
  */
 export const EMBEDDED_OAUTH_CLIENT_ID = '6f14d1c1384440b1b2915f6d956da84b'
 
-/** OAuth scope this server requests (read-only Metrica access). */
-const SCOPE = 'metrika:read'
+/**
+ * OAuth scopes this server requests (read-only).
+ *
+ * `metrika:read` covers Yandex Metrica (web counters). `appmetrica:read` covers
+ * AppMetrica (mobile apps) — a separate product with its own API host. The
+ * embedded client is registered for Metrica only, so the AppMetrica tools work
+ * only with a user's own OAuth app (YANDEX_OAUTH_CLIENT_ID) that requests both.
+ */
+const SCOPE = 'metrika:read appmetrica:read'
 
 /**
  * Resolved, validated domain configuration for the server. Auth lives in a
@@ -34,8 +41,12 @@ const SCOPE = 'metrika:read'
 export interface Config {
     /** Optional default counter id used when a tool call omits `counterId`. */
     readonly defaultCounterId?: number
+    /** Optional default AppMetrica app id used when a call omits `appId`. */
+    readonly defaultAppId?: number
     /** API base URL (overridable only for tests/mocks). */
     readonly baseUrl: string
+    /** AppMetrica API base URL (separate host from Metrica). */
+    readonly appmetricaBaseUrl: string
     /** Language for human-readable labels in responses. */
     readonly lang: string
     /** Max concurrent in-flight requests to the Metrica API (token-bucket). */
@@ -55,6 +66,10 @@ const EnvSchema = z.object({
     YANDEX_METRIKA_LANG: z.string().min(2).max(5).default('en'),
     YANDEX_METRIKA_BASE_URL: z.url().default('https://api-metrika.yandex.net'),
     YANDEX_METRIKA_LOGS_DIR: z.string().min(1).optional(),
+    YANDEX_APPMETRICA_APP_ID: z.coerce.number().int().positive().optional(),
+    YANDEX_APPMETRICA_BASE_URL: z
+        .url()
+        .default('https://api.appmetrica.yandex.com'),
 })
 
 /** Internal, non-env-tunable defaults that callers rarely need to change. */
@@ -79,7 +94,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     const e = parsed.data
     return {
         defaultCounterId: e.YANDEX_METRIKA_COUNTER_ID,
+        defaultAppId: e.YANDEX_APPMETRICA_APP_ID,
         baseUrl: e.YANDEX_METRIKA_BASE_URL.replace(/\/+$/, ''),
+        appmetricaBaseUrl: e.YANDEX_APPMETRICA_BASE_URL.replace(/\/+$/, ''),
         lang: e.YANDEX_METRIKA_LANG,
         maxConcurrency: MAX_CONCURRENCY,
         requestTimeoutMs: REQUEST_TIMEOUT_MS,

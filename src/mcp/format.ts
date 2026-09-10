@@ -2,6 +2,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import {
     errorResult as coreErrorResult,
     toToolResult,
+    YandexApiError,
 } from '@boxlab/yandex-mcp-core'
 import {
     isProcessed,
@@ -493,4 +494,36 @@ export { toToolResult }
  */
 export function errorResult(err: unknown): CallToolResult {
     return coreErrorResult(err, { resourceNoun: 'counter' })
+}
+
+/**
+ * Error result for the AppMetrica tools. Same shape as {@link errorResult}, but
+ * names the right resource ("app") and appends the scope hint: AppMetrica needs
+ * `appmetrica:read`, which the embedded Metrica-only OAuth client cannot grant,
+ * so a 403 here usually means the token lacks the scope rather than the account
+ * lacking access.
+ */
+export function appmetricaErrorResult(err: unknown): CallToolResult {
+    const result = coreErrorResult(err, { resourceNoun: 'app' })
+    if (!(err instanceof YandexApiError)) return result
+    if (err.status !== 403 && !err.errorTypes.includes('access_denied')) {
+        return result
+    }
+
+    const scopeHint =
+        'AppMetrica requires the `appmetrica:read` OAuth scope, which the built-in client does not have. ' +
+        'Register your own Yandex OAuth app with appmetrica:read, set YANDEX_OAUTH_CLIENT_ID (and _SECRET), ' +
+        'then sign in again with the `login` tool or the `auth` command.'
+    const structured = result.structuredContent as
+        Record<string, unknown> | undefined
+
+    const first = result.content[0]
+    const baseText =
+        first && first.type === 'text' ? first.text : `Error: ${err.message}`
+
+    return {
+        ...result,
+        content: [{ type: 'text', text: `${baseText}\n${scopeHint}` }],
+        structuredContent: { ...(structured ?? {}), hint: scopeHint },
+    }
 }

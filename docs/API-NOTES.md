@@ -93,15 +93,15 @@ the static field catalog), and **`describe_counter`** returns a single counter's
 config, choosing sections via an `include` param instead of one tool per
 resource.
 
-| Accessor          | Endpoint                                              | Wrapper       |
-| ----------------- | ----------------------------------------------------- | ------------- |
-| `listCounters`    | `GET /management/v1/counters` (`per_page=1000`)       | `{ counters }`|
-| `getCounter`      | `GET /management/v1/counter/{id}`                     | `{ counter }` |
-| `listGoals`       | `GET /management/v1/counter/{id}/goals`               | `{ goals }`   |
-| `listSegments`    | `GET /management/v1/counter/{id}/apisegment/segments` | `{ segments }`|
-| `listFilters`     | `GET /management/v1/counter/{id}/filters`             | `{ filters }` |
-| `listOperations`  | `GET /management/v1/counter/{id}/operations`          | `{ operations }`|
-| `listGrants`      | `GET /management/v1/counter/{id}/grants`              | `{ grants }`  |
+| Accessor         | Endpoint                                              | Wrapper          |
+| ---------------- | ----------------------------------------------------- | ---------------- |
+| `listCounters`   | `GET /management/v1/counters` (`per_page=1000`)       | `{ counters }`   |
+| `getCounter`     | `GET /management/v1/counter/{id}`                     | `{ counter }`    |
+| `listGoals`      | `GET /management/v1/counter/{id}/goals`               | `{ goals }`      |
+| `listSegments`   | `GET /management/v1/counter/{id}/apisegment/segments` | `{ segments }`   |
+| `listFilters`    | `GET /management/v1/counter/{id}/filters`             | `{ filters }`    |
+| `listOperations` | `GET /management/v1/counter/{id}/operations`          | `{ operations }` |
+| `listGrants`     | `GET /management/v1/counter/{id}/grants`              | `{ grants }`     |
 
 - `describe_counter` maps `include` sections to accessors: settings→getCounter,
   goals→listGoals, segments→listSegments, filters→listFilters,
@@ -162,3 +162,31 @@ request = `logrequest/{requestId}` (singular).
    `is_favorite` and counter `favorite`. Parse them with a flexible
    boolean-or-number that normalizes to boolean (see `FlexibleBool` in
    `src/api/schemas.ts`).
+
+## AppMetrica (separate product)
+
+AppMetrica is **not** Yandex Metrica. Verified differences:
+
+|            | Metrica                  | AppMetrica                                        |
+| ---------- | ------------------------ | ------------------------------------------------- |
+| Host       | `api-metrika.yandex.net` | `api.appmetrica.yandex.com` (`.ru` also resolves) |
+| Entity     | `counters` (`counterId`) | `applications` (`appId`)                          |
+| Scope      | `metrika:read`           | `appmetrica:read`                                 |
+| Namespaces | `ym:s:`, `ym:pv:`        | `ym:ge:`, `ym:ce:`, `ym:i:`, `ym:c:`, `ym:s:`     |
+
+- **The Reporting API is the same shape**: `/stat/v1/data`, `/data/bytime` and
+  `/data/drilldown` take the same parameters and return the same envelope, so
+  `src/api/reporting.ts` and the formatters are reused verbatim against a
+  second client that differs only in `baseUrl`.
+- **No metadata endpoint exists.** Metrica at least has documented dimension
+  lists; AppMetrica has neither an API nor a fully machine-readable catalog, so
+  `src/api/appmetricaCatalog.ts` is a hand-curated subset from the docs. Unknown
+  ids fail with 4001 (dimension) / 4002 (metric) — do not invent ids.
+- **Namespaces cannot be mixed** in one request; only `filters` may reference a
+  different prefix.
+- **`/management/v1/applications` returns credentials**: `api_key128` and
+  `import_token` are write keys for the app. `sanitizeApplication()` strips them
+  before they can reach the model; a mutation test guards this.
+- **403 `access_denied` here usually means a missing scope**, not missing
+  account access — the embedded OAuth client is Metrica-only. The AppMetrica
+  tools use `appmetricaErrorResult()` to say so explicitly.

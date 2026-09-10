@@ -23,16 +23,23 @@ function capture(register: Register, ctx: ToolContext): Handler {
 }
 
 function ctxWith(fetchImpl: typeof fetch): ToolContext {
-    const client = new YandexClient({
-        baseUrl: 'https://api-metrika.yandex.net',
+    const opts = {
         getToken: async () => 'tok',
         userAgent: 'test/1.0',
         maxConcurrency: 3,
         requestTimeoutMs: 1000,
         fetchImpl,
         sleep: async () => {},
+    }
+    const client = new YandexClient({
+        baseUrl: 'https://api-metrika.yandex.net',
+        ...opts,
     })
-    return { client, config: loadConfig({}) }
+    const appmetricaClient = new YandexClient({
+        baseUrl: 'https://api.appmetrica.yandex.com',
+        ...opts,
+    })
+    return { client, appmetricaClient, config: loadConfig({}) }
 }
 
 const structured = (res: CallToolResult) =>

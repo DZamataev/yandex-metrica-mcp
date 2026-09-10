@@ -12,6 +12,14 @@ import {
     type Config,
 } from '../config.js'
 import type { ToolContext } from './context.js'
+import {
+    registerAppmetricaDescribeApp,
+    registerAppmetricaGetMetadata,
+    registerAppmetricaListApps,
+    registerAppmetricaRunDrilldown,
+    registerAppmetricaRunReport,
+    registerAppmetricaRunTimeseries,
+} from './tools/appmetrica.js'
 import { registerDescribeCounter } from './tools/describeCounter.js'
 import { registerGetMetadata } from './tools/getMetadata.js'
 import { registerLogsClean } from './tools/logsClean.js'
@@ -44,7 +52,20 @@ export function createServer(config: Config = loadConfig()): McpServer {
         lang: config.lang,
     })
 
-    const ctx: ToolContext = { client, config }
+    // AppMetrica is a separate product on its own host; same token, same
+    // client semantics (its Reporting API mirrors Metrica's /stat/v1/*).
+    const appmetricaClient = new YandexClient({
+        baseUrl: config.appmetricaBaseUrl,
+        getToken: () => provider.getAccessToken(),
+        onUnauthorized: rejected => provider.forceRefresh(rejected),
+        canRefresh: () => provider.canRefresh(),
+        userAgent: config.userAgent,
+        maxConcurrency: config.maxConcurrency,
+        requestTimeoutMs: config.requestTimeoutMs,
+        lang: config.lang,
+    })
+
+    const ctx: ToolContext = { client, appmetricaClient, config }
     const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION })
 
     registerLoginTools(server, { config: authConfig, provider, store })
@@ -58,6 +79,14 @@ export function createServer(config: Config = loadConfig()): McpServer {
     registerLogsStatus(server, ctx)
     registerLogsDownload(server, ctx)
     registerLogsClean(server, ctx)
+
+    // AppMetrica (mobile apps) — separate product, separate host.
+    registerAppmetricaListApps(server, ctx)
+    registerAppmetricaGetMetadata(server, ctx)
+    registerAppmetricaDescribeApp(server, ctx)
+    registerAppmetricaRunReport(server, ctx)
+    registerAppmetricaRunTimeseries(server, ctx)
+    registerAppmetricaRunDrilldown(server, ctx)
 
     return server
 }

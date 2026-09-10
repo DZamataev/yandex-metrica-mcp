@@ -19,6 +19,9 @@ A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for
 sources, landing pages, conversions, geography, devices and trends — through a
 small set of flexible, read-only tools.
 
+This fork also covers **[AppMetrica](#appmetrica-mobile-apps)** (Yandex's mobile
+app analytics — a separate product with its own API and OAuth scope).
+
 > Read-only by design, no secrets stored in the package: interactive login uses
 > a built-in public OAuth client with PKCE, and the server talks only to Yandex.
 
@@ -98,13 +101,13 @@ Add an entry under `mcp_servers:` in `~/.hermes/config.yaml`:
 
 ```yaml
 mcp_servers:
-  yandex-metrica:
-    command: npx
-    args:
-      - '-y'
-      - 'github:DZamataev/yandex-metrica-mcp'
-    env:
-      YANDEX_METRIKA_COUNTER_ID: '12345678' # optional
+    yandex-metrica:
+        command: npx
+        args:
+            - '-y'
+            - 'github:DZamataev/yandex-metrica-mcp'
+        env:
+            YANDEX_METRIKA_COUNTER_ID: '12345678' # optional
 ```
 
 Then restart Hermes and sign in once — either run
@@ -123,10 +126,10 @@ cd yandex-metrica-mcp && bun install && bun run build
 
 ```yaml
 mcp_servers:
-  yandex-metrica:
-    command: /Users/you/.hermes/node/bin/node
-    args:
-      - '/absolute/path/to/yandex-metrica-mcp/dist/index.js'
+    yandex-metrica:
+        command: /Users/you/.hermes/node/bin/node
+        args:
+            - '/absolute/path/to/yandex-metrica-mcp/dist/index.js'
 ```
 
 Use an absolute path to `node` (Hermes ships its own at
@@ -190,6 +193,10 @@ flexible report tools, strict token/context discipline, read-only by default.
   (request → poll → download → clean); `logs_download` returns a bounded sample
   inline by default, or streams the full export to a file — never dumping raw
   rows into the model's context.
+- `appmetrica_list_apps` / `appmetrica_get_metadata` / `appmetrica_describe_app`
+  / `appmetrica_run_report` / `appmetrica_run_timeseries` /
+  `appmetrica_run_drilldown` — **AppMetrica** (mobile app analytics). See
+  [AppMetrica](#appmetrica-mobile-apps) — it needs your own OAuth app.
 - `login` / `submit_code` — sign in to Yandex Metrica from your MCP client, no
   terminal needed: `login` opens the browser and captures the code over a local
   redirect, or hands back a URL and takes the pasted code via `submit_code`.
@@ -242,9 +249,14 @@ Audited on this fork; worth knowing before you point an agent at production
 analytics:
 
 - **Network egress is Yandex-only.** The server talks to
-  `api-metrika.yandex.net` and `oauth.yandex.com`. Both are overridable via
-  `YANDEX_METRIKA_BASE_URL` / `YANDEX_OAUTH_BASE_URL` — there is no telemetry,
-  analytics, or error-reporting endpoint of any kind.
+  `api-metrika.yandex.net`, `api.appmetrica.yandex.com` (only when an
+  `appmetrica_*` tool is called) and `oauth.yandex.com`. All are overridable via
+  `YANDEX_METRIKA_BASE_URL` / `YANDEX_APPMETRICA_BASE_URL` /
+  `YANDEX_OAUTH_BASE_URL` — there is no telemetry, analytics, or
+  error-reporting endpoint of any kind.
+- **AppMetrica credentials are stripped.** Its apps endpoint returns
+  `api_key128` and `import_token` (write credentials for the app); this server
+  removes them before the response reaches the model.
 - **Tokens stay local.** The OAuth token is written to
   `~/.config/yandex-metrica-mcp/token.json` with mode `0600` in a `0700`
   directory, and is sent only as an `Authorization` header to the Yandex API. It
@@ -265,6 +277,58 @@ analytics:
   OAuth client is a public client shared by all users of the upstream project;
   set `YANDEX_OAUTH_CLIENT_ID` to your own registered app if you would rather
   the consent screen and app identity be yours.
+
+## AppMetrica (mobile apps)
+
+**AppMetrica is a separate Yandex product from Yandex Metrica.** Metrica reports
+on websites (`counterId`, `ym:s:`/`ym:pv:` fields); AppMetrica reports on mobile
+apps (`appId`, `ym:ge:`/`ym:ce:` fields) on a different API host. A Yandex
+account can own apps in one and no counters in the other — if `get_metadata`
+returns zero counters but you can see data at `appmetrica.yandex.com`, this
+section is what you want.
+
+The `appmetrica_*` tools cover the app list, app settings, table reports, time
+series and drilldowns.
+
+### It requires your own OAuth app
+
+AppMetrica needs the `appmetrica:read` scope. The built-in client shipped with
+this server is registered for Metrica only and **cannot** grant it, so you must
+register your own Yandex OAuth app once. Without this, every `appmetrica_*` call
+fails with `403 access_denied`.
+
+1. Open <https://oauth.yandex.com/client/new> and create an app.
+2. Under **Data access**, add both `appmetrica:read` and `metrika:read` (start
+   typing the name to find them).
+3. Platform: **Web services**. Set the Redirect URI to
+   `https://oauth.yandex.com/verification_code`, and — to keep the automatic
+   loopback sign-in — also add `http://127.0.0.1:53682/callback`.
+4. Copy the **ClientID** (and the secret, if you want automatic token refresh).
+5. Point the server at it and sign in again:
+
+```bash
+export YANDEX_OAUTH_CLIENT_ID=<your client id>
+export YANDEX_OAUTH_CLIENT_SECRET=<your client secret>   # optional
+rm -f ~/.config/yandex-metrica-mcp/token.json            # drop the old scope
+bun run auth
+```
+
+In an MCP client, put those variables in the server's `env` block instead, then
+re-run the `login` tool.
+
+### Notes
+
+- **Namespaces don't mix.** One request must use a single prefix — `ym:ge:`
+  (general events), `ym:ce:` (custom events), `ym:i:` (installs), `ym:c:`
+  (clicks), `ym:s:` (sessions). Only `filters` may reference another prefix.
+- **No metadata API.** AppMetrica publishes no endpoint listing valid ids, so
+  `appmetrica_get_metadata` returns a curated subset from the docs, not the full
+  set. Unknown ids fail with 4001 (dimension) or 4002 (metric). For anything
+  outside the catalog, open the report in the AppMetrica UI and use
+  **Export → Copy table API request** to get exact ids.
+- **API keys are never returned.** The apps endpoint also carries `api_key128`
+  and `import_token` — credentials for writing data into the app. They are
+  stripped before anything reaches the model.
 
 ## Configuration
 

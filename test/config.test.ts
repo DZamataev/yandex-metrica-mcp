@@ -35,9 +35,13 @@ describe('loadConfig', () => {
 })
 
 describe('loadAuthConfig', () => {
-    it('defaults to the embedded public client and metrika:read scope', () => {
+    it('defaults to the embedded public client and read-only scopes', () => {
         const auth = loadAuthConfig({} as NodeJS.ProcessEnv)
-        expect(auth.scope).toBe('metrika:read')
+        // Both products are requested: Metrica (web counters) and AppMetrica
+        // (mobile apps). Order matters only for readability, not to Yandex.
+        expect(auth.scope).toBe('metrika:read appmetrica:read')
+        expect(auth.scope?.split(' ')).toContain('metrika:read')
+        expect(auth.scope?.split(' ')).toContain('appmetrica:read')
         expect(auth.appName).toBe('yandex-metrica-mcp')
         expect(auth.embeddedClientId).toBe('6f14d1c1384440b1b2915f6d956da84b')
         expect(auth.staticToken).toBeUndefined()
