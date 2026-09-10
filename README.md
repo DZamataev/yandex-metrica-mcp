@@ -1,8 +1,15 @@
 # yandex-metrica-mcp
 
-[![CI](https://github.com/BoxLab-Ltd/yandex-metrica-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/BoxLab-Ltd/yandex-metrica-mcp/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/yandex-metrica-mcp.svg)](https://www.npmjs.com/package/yandex-metrica-mcp)
+[![CI](https://github.com/DZamataev/yandex-metrica-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/DZamataev/yandex-metrica-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
+> **This is a personal fork** of
+> [BoxLab-Ltd/yandex-metrica-mcp](https://github.com/BoxLab-Ltd/yandex-metrica-mcp).
+> It installs from **this fork's** Git repo (and its forked
+> [`yandex-mcp-core`](https://github.com/DZamataev/yandex-mcp-core)), not from
+> the upstream npm packages, so no upstream release can change what runs on your
+> machine without you pulling it. Nothing here is published to npm or the MCP
+> registry.
 
 **Ask your Yandex Metrica analytics in plain language — from Claude, Cursor, or
 any MCP client.**
@@ -37,17 +44,21 @@ required up front; you log in interactively in step 2:
     "mcpServers": {
         "yandex-metrica": {
             "command": "npx",
-            "args": ["-y", "yandex-metrica-mcp"],
+            "args": ["-y", "github:DZamataev/yandex-metrica-mcp"],
             "env": { "YANDEX_METRIKA_COUNTER_ID": "12345678" }
         }
     }
 }
 ```
 
+`npx` clones this fork, builds it (a `prepare` script runs `tsc`), and runs the
+result — so the first start takes a few seconds. Pin a specific commit or tag by
+appending it, e.g. `github:DZamataev/yandex-metrica-mcp#v0.3.0`.
+
 **2. Log in once — one command, no app registration, no secret stored:**
 
 ```bash
-npx yandex-metrica-mcp auth
+npx -y github:DZamataev/yandex-metrica-mcp auth
 ```
 
 Approve access in the browser and you're done — the code is handed back
@@ -67,19 +78,51 @@ The repo doubles as a plugin marketplace, so you can install the server through
 Claude Code's plugin system instead of the config above:
 
 ```bash
-/plugin marketplace add BoxLab-Ltd/yandex-metrica-mcp
-/plugin install yandex-metrica-mcp@boxlab
+/plugin marketplace add DZamataev/yandex-metrica-mcp
+/plugin install yandex-metrica-mcp@dzamataev
 ```
 
-Then run `npx yandex-metrica-mcp auth` once to log in.
+Then run `npx -y github:DZamataev/yandex-metrica-mcp auth` once to log in.
 
 ### Or install as a Claude Desktop extension (.mcpb)
 
 For a one-click install with no JSON, download the `.mcpb` from the
-[latest release](https://github.com/BoxLab-Ltd/yandex-metrica-mcp/releases/latest)
+[latest release of this fork](https://github.com/DZamataev/yandex-metrica-mcp/releases/latest)
 and open it with Claude Desktop (or drag it into Settings → Extensions). It asks
 for an optional default counter id; then sign in from the chat with the `login`
-tool (or run `npx yandex-metrica-mcp auth`).
+tool (or run `npx -y github:DZamataev/yandex-metrica-mcp auth`).
+
+### Or connect it to Hermes / Claude Code
+
+Add the server to Hermes' MCP config (`~/.hermes/config.yaml`) — or run the
+equivalent `claude mcp add` — pointing at this fork:
+
+```yaml
+mcp_servers:
+    yandex-metrica:
+        command: npx
+        args: ['-y', 'github:DZamataev/yandex-metrica-mcp']
+        env:
+            YANDEX_METRIKA_COUNTER_ID: '12345678' # optional
+```
+
+For Claude Code:
+
+```bash
+claude mcp add yandex-metrica -- npx -y github:DZamataev/yandex-metrica-mcp
+```
+
+Then sign in once (`npx -y github:DZamataev/yandex-metrica-mcp auth`), or just
+ask the agent to run the `login` tool.
+
+Prefer a fixed local checkout over a fresh clone on every start? Clone the fork,
+`bun install && bun run build`, and point the client at the built entry point:
+
+```bash
+git clone git@github.com:DZamataev/yandex-metrica-mcp.git
+cd yandex-metrica-mcp && bun install && bun run build
+claude mcp add yandex-metrica -- node "$PWD/dist/index.js"
+```
 
 ## Why
 
@@ -126,7 +169,7 @@ flag).
 ships a built-in public OAuth client. Run once:
 
 ```bash
-yandex-metrica-mcp auth     # or, in dev: bun run auth
+npx -y github:DZamataev/yandex-metrica-mcp auth   # or, in a clone: bun run auth
 ```
 
 It opens the Yandex consent page in your browser; after you approve, the code is
@@ -149,6 +192,36 @@ for CI or non-interactive use.
 **Own OAuth app (optional).** To use your own app instead of the built-in one,
 set `YANDEX_OAUTH_CLIENT_ID`; add `YANDEX_OAUTH_CLIENT_SECRET` to also enable
 automatic token refresh.
+
+## What leaves your machine
+
+Audited on this fork; worth knowing before you point an agent at production
+analytics:
+
+- **Network egress is Yandex-only.** The server talks to
+  `api-metrika.yandex.net` and `oauth.yandex.com`. Both are overridable via
+  `YANDEX_METRIKA_BASE_URL` / `YANDEX_OAUTH_BASE_URL` — there is no telemetry,
+  analytics, or error-reporting endpoint of any kind.
+- **Tokens stay local.** The OAuth token is written to
+  `~/.config/yandex-metrica-mcp/token.json` with mode `0600` in a `0700`
+  directory, and is sent only as an `Authorization` header to the Yandex API. It
+  is never logged or included in tool output. Sign-in uses authorization-code +
+  PKCE, so no client secret exists to leak.
+- **The real exposure is your agent's context, not the network.** Every tool is
+  read-only, but the data they return — and especially the Logs API (`ym:s:*`
+  / `ym:pv:*` raw rows) — can contain visitor IPs, `ClientID`s, referrers and
+  full URLs. Whatever a tool returns goes to your LLM provider. `logs_download`
+  defaults to a bounded inline sample and flags personal fields in its output;
+  use `mode: "file"` to stream the full export to disk so raw rows never enter
+  the model's context, and run `logs_clean` afterwards.
+- **`logs_download` writes files.** With `mode: "file"` it writes to
+  `YANDEX_METRIKA_LOGS_DIR` (default: a folder under the OS temp dir), or to an
+  `outputPath` the agent chooses — an agent-controlled path on your filesystem.
+  Set `YANDEX_METRIKA_LOGS_DIR` if you want those exports somewhere predictable.
+- **Least privilege.** The requested scope is `metrika:read` only. The built-in
+  OAuth client is a public client shared by all users of the upstream project;
+  set `YANDEX_OAUTH_CLIENT_ID` to your own registered app if you would rather
+  the consent screen and app identity be yours.
 
 ## Configuration
 
@@ -190,6 +263,29 @@ bun test           # bun's test runner
 bun run build      # emit dist/ with tsc (Node-compatible)
 ```
 
+### Fork layout
+
+The shared auth/HTTP layer lives in a separate package, and this fork consumes
+the **forked** copy of it straight from Git:
+
+```json
+"@boxlab/yandex-mcp-core": "github:DZamataev/yandex-mcp-core#main"
+```
+
+That package builds itself on install via a `prepare` script, which Bun runs
+only because it is listed in `trustedDependencies`. To pin it, replace `#main`
+with a commit SHA and re-run `bun install`.
+
+### Syncing with upstream
+
+```bash
+git remote add upstream https://github.com/BoxLab-Ltd/yandex-metrica-mcp.git   # once
+git fetch upstream && git merge upstream/main
+```
+
+Do the same in the `yandex-mcp-core` fork. Review incoming changes before
+merging — that review is the whole point of running from a fork.
+
 ## License
 
-[MIT](./LICENSE) © boxlab
+[MIT](./LICENSE) © boxlab, fork maintained by [@DZamataev](https://github.com/DZamataev)
