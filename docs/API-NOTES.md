@@ -167,13 +167,17 @@ request = `logrequest/{requestId}` (singular).
 
 AppMetrica is **not** Yandex Metrica. Verified differences:
 
-|            | Metrica                  | AppMetrica                                        |
-| ---------- | ------------------------ | ------------------------------------------------- |
-| Host       | `api-metrika.yandex.net` | `api.appmetrica.yandex.com` (`.ru` also resolves) |
-| Entity     | `counters` (`counterId`) | `applications` (`appId`)                          |
-| Scope      | `metrika:read`           | `appmetrica:read`                                 |
-| Namespaces | `ym:s:`, `ym:pv:`        | `ym:ge:`, `ym:ce:`, `ym:i:`, `ym:c:`, `ym:s:`     |
+|            | Metrica                  | AppMetrica                                    |
+| ---------- | ------------------------ | --------------------------------------------- |
+| Host       | `api-metrika.yandex.net` | `api.appmetrica.yandex.ru` (see below)        |
+| Entity     | `counters` (`counterId`) | `applications` (`appId`)                      |
+| Scope      | `metrika:read`           | `appmetrica:read`                             |
+| Namespaces | `ym:s:`, `ym:pv:`        | `ym:ge:`, `ym:ce:`, `ym:i:`, `ym:c:`, `ym:s:` |
 
+- **The default host is `.ru`, not `.com`.** Both serve the same API, but
+  `api.appmetrica.yandex.com` resolves to `0.0.0.0` on Russian networks, so a
+  request there fails to connect before it is ever sent. Point
+  `YANDEX_APPMETRICA_BASE_URL` at `.com` where that host resolves.
 - **The Reporting API is the same shape**: `/stat/v1/data`, `/data/bytime` and
   `/data/drilldown` take the same parameters and return the same envelope, so
   `src/api/reporting.ts` and the formatters are reused verbatim against a

@@ -4,7 +4,7 @@ import { z } from 'zod'
 /**
  * AppMetrica Management API — the app (mobile analytics) counterpart to
  * Metrica's counters. AppMetrica is a SEPARATE Yandex product: different host
- * (`api.appmetrica.yandex.com`), different OAuth scope (`appmetrica:read`) and
+ * (`api.appmetrica.yandex.ru`), different OAuth scope (`appmetrica:read`) and
  * a different entity (`applications`, not `counters`).
  *
  * Its Reporting API, however, mirrors Metrica's `/stat/v1/*` endpoints exactly,

@@ -69,7 +69,11 @@ const EnvSchema = z.object({
     YANDEX_APPMETRICA_APP_ID: z.coerce.number().int().positive().optional(),
     YANDEX_APPMETRICA_BASE_URL: z
         .url()
-        .default('https://api.appmetrica.yandex.com'),
+        // `.ru`, not `.com`: the two hosts serve the same API, but `.com` is
+        // DNS-poisoned to 0.0.0.0 on Russian networks, where this server is
+        // normally run, so it fails to connect before any request is sent.
+        // Override the variable to use `.com` where that host resolves.
+        .default('https://api.appmetrica.yandex.ru'),
 })
 
 /** Internal, non-env-tunable defaults that callers rarely need to change. */

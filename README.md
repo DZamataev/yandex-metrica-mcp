@@ -249,7 +249,7 @@ Audited on this fork; worth knowing before you point an agent at production
 analytics:
 
 - **Network egress is Yandex-only.** The server talks to
-  `api-metrika.yandex.net`, `api.appmetrica.yandex.com` (only when an
+  `api-metrika.yandex.net`, `api.appmetrica.yandex.ru` (only when an
   `appmetrica_*` tool is called) and `oauth.yandex.com`. All are overridable via
   `YANDEX_METRIKA_BASE_URL` / `YANDEX_APPMETRICA_BASE_URL` /
   `YANDEX_OAUTH_BASE_URL` — there is no telemetry, analytics, or

@@ -225,8 +225,10 @@ describe('appmetrica: crash catalog', () => {
 describe('appmetrica: config', () => {
     test('defaults to the AppMetrica host, separate from Metrica', () => {
         const config = loadConfig({})
+        // `.ru`, not `.com`: both serve the same API, but `.com` resolves to
+        // 0.0.0.0 on Russian networks, so it can never connect there.
         expect(config.appmetricaBaseUrl).toBe(
-            'https://api.appmetrica.yandex.com',
+            'https://api.appmetrica.yandex.ru',
         )
         expect(config.baseUrl).toBe('https://api-metrika.yandex.net')
     })
